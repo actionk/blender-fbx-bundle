@@ -82,15 +82,12 @@ def export(self, target_platform):
 	previous_pivot = bpy.context.tool_settings.transform_pivot_point
 	previous_cursor = bpy.context.scene.cursor.location.copy()
 
+
 	if not bpy.context.view_layer.objects.active:
 		bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
 
 	bpy.ops.object.mode_set(mode='OBJECT')
 	bundles = objects_organise.get_bundles()
-
-	
-
-
 
 	bpy.context.scene.unit_settings.system = 'METRIC'	
 	bpy.context.tool_settings.transform_pivot_point = 'MEDIAN_POINT'
@@ -111,6 +108,14 @@ def export(self, target_platform):
 
 			bpy.ops.object.select_all(action="DESELECT")
 			obj.select_set(state = True)
+
+			for child in obj.children:
+				if not child.visible_get():
+					continue
+
+				child.name = prefix_copy + child.name
+				child.select_set(True)
+
 			bpy.context.view_layer.objects.active = obj
 			obj.hide_viewport = False
 			
@@ -119,15 +124,19 @@ def export(self, target_platform):
 			bpy.ops.object.convert(target='MESH')
 			bpy.context.object.name = name_original
 			copies.append(bpy.context.object)
+
+			i = 0
+			for child in bpy.context.object.children:
+				copies.append(child)
+				child.name = obj.children[i].name.replace(prefix_copy,"")
+				i = i + 1
 			
 			bpy.context.object.location-= pivot
-
 
 		bpy.ops.object.select_all(action="DESELECT")
 		for obj in copies:
 			obj.select_set(state = True)
 		bpy.context.view_layer.objects.active = copies[0]
-
 
 		# Apply modifiers
 
@@ -162,10 +171,10 @@ def export(self, target_platform):
 		
 		# Restore names
 		for obj in objects:
+			for child in obj.children:
+				child.name = child.name.replace(prefix_copy,"")
+
 			obj.name = obj.name.replace(prefix_copy,"")
-
-		
-
 
 	# Restore previous settings
 	bpy.context.scene.unit_settings.system = previous_unit_system

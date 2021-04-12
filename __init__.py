@@ -139,7 +139,8 @@ class FBXBundleSettings(bpy.types.PropertyGroup):
 		# ('SPACE', 'Space', "Bundle by shared space"), 
 		('GROUP', 'Group', "Bundle by 'Groups'"),
 		('MATERIAL', 'Material', "Bundle by matching material names"),
-		('SCENE', 'Scene', "Bundle by current scene")
+		('SCENE', 'Scene', "Bundle by current scene"),
+		('VIEW_LAYER', 'View Layer', "Bundle by current view layer")
 		], name = "Bundle Mode", default = 'NAME'
 	)
 	mode_pivot: bpy.props.EnumProperty(items=[

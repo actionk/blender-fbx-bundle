@@ -23,8 +23,24 @@ def is_object_valid(obj):
 
 def get_objects():
 	objects = []
-	for obj in bpy.context.selected_objects:
-		objects.append(obj)
+
+	if bpy.context.scene.FBXBundleSettings.mode_bundle == 'VIEW_LAYER':
+			# Include all objects of the view layer
+			for obj in bpy.context.layer_collection.collection.objects:
+				if obj not in objects and obj.parent is None:
+					objects.append(obj)
+
+			for layer_collection in bpy.context.layer_collection.children:
+					if layer_collection.exclude:
+						continue
+
+					collection = layer_collection.collection
+					for obj in collection.objects:
+						if obj not in objects and obj.parent is None:
+							objects.append(obj)
+	else:
+		for obj in bpy.context.selected_objects:
+			objects.append(obj)
 
 	# Include all children?
 	if len(objects) > 0 and bpy.context.scene.FBXBundleSettings.include_children:
@@ -372,7 +388,7 @@ def get_key(obj):
 		if len(obj.material_slots) >= 1:
 			return obj.material_slots[0].name
 
-	elif mode_bundle == 'SCENE':
+	elif mode_bundle == 'SCENE' or mode_bundle == 'VIEW_LAYER':
 		# Use scene name
 		return bpy.context.scene.name
 
