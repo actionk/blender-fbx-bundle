@@ -82,7 +82,7 @@ def export(self, target_platform, exportAll):
 		self.report({'ERROR_INVALID_INPUT'}, "Path doesn't exist" )
 		return
 
-	if len(bpy.context.selected_objects) == 0 and not bpy.context.view_layer.objects.active:
+	if not exportAll and (len(bpy.context.selected_objects) == 0 and not bpy.context.view_layer.objects.active):
 		self.report({'ERROR_INVALID_INPUT'}, "No objects selected" )
 		return
 
@@ -107,6 +107,9 @@ def export(self, target_platform, exportAll):
 
 	# exporting all objects
 	if exportAll:
+		for obj in bpy.data.objects:
+			obj.select_set(True)
+
 		for collection in bpy.data.collections:
 			if collection.hide_render or collection.hide_select or collection.hide_viewport:
 				continue
