@@ -347,7 +347,7 @@ class Panel_Files(bpy.types.Panel):
 		col = layout.column(align=True)	
 		row = col.row(align=True)
 
-		split = row.split(factor=0.4, align=True)
+		split = row.split(factor=0.33, align=True)
 
 		c = split.column(align=True)
 		c.scale_y = 1.85
@@ -356,7 +356,10 @@ class Panel_Files(bpy.types.Panel):
 		c = split.column(align=True)
 		c.scale_y = 1.85
 		c.operator(op_file_export.op.bl_idname, text="Export {}x".format(len(bundles)), icon_value=icon)
-		
+
+		c = split.column(align=True)
+		c.scale_y = 1.85
+		c.operator(op_file_export.op_all.bl_idname, text="Export all", icon_value=icon)
 
 		if len(bpy.context.scene.FBXBundleSettings.recent) > 0:
 			if len(objects_organise.recent_load_objects()) > 0:

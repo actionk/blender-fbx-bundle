@@ -41,13 +41,36 @@ class op(bpy.types.Operator):
 		return True
 
 	def execute(self, context):
-		export(self, bpy.context.scene.FBXBundleSettings.target_platform)
+		export(self, bpy.context.scene.FBXBundleSettings.target_platform, False)
 		return {'FINISHED'}
 
+class op_all(bpy.types.Operator):
+	bl_idname = "fbxbundle.file_export_all"
+	bl_label = "export_all"
+	bl_description = "Export all bundles"
+
+	@classmethod
+	def poll(cls, context):
+
+		if context.space_data.local_view:
+			return False
+
+		if bpy.context.scene.FBXBundleSettings.path == "":
+			return False
+
+		if len( objects_organise.get_bundles() ) == 0:
+			return False
+
+
+		return True
+
+	def execute(self, context):
+		export(self, bpy.context.scene.FBXBundleSettings.target_platform, True)
+		return {'FINISHED'}
 
 prefix_copy = "EXPORT_ORG_"
 
-def export(self, target_platform):
+def export(self, target_platform, exportAll):
 
 	# Warnings
 	if bpy.context.scene.FBXBundleSettings.path == "":
@@ -82,6 +105,14 @@ def export(self, target_platform):
 	previous_pivot = bpy.context.tool_settings.transform_pivot_point
 	previous_cursor = bpy.context.scene.cursor.location.copy()
 
+	# exporting all objects
+	if exportAll:
+		for collection in bpy.data.collections:
+			if collection.hide_render or collection.hide_select or collection.hide_viewport:
+				continue
+
+			for obj in collection.objects:
+				obj.select_set(True)
 
 	if not bpy.context.view_layer.objects.active:
 		bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
