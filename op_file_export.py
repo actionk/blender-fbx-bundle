@@ -58,10 +58,6 @@ class op_all(bpy.types.Operator):
 		if bpy.context.scene.FBXBundleSettings.path == "":
 			return False
 
-		if len( objects_organise.get_bundles() ) == 0:
-			return False
-
-
 		return True
 
 	def execute(self, context):
@@ -69,6 +65,86 @@ class op_all(bpy.types.Operator):
 		return {'FINISHED'}
 
 prefix_copy = "EXPORT_ORG_"
+
+def export_object(obj, prefix_copy, originals, copies, pivot):
+	if obj in originals:
+		return None
+
+	if not obj.visible_get():
+		return None
+
+	children = []
+	for child in obj.children:
+		if not child.visible_get():
+			continue
+
+		output = export_object(child, prefix_copy, originals, copies, pivot)
+		if output is not None:
+			children.append(output)
+
+	name_original = obj.name
+	obj.name = prefix_copy+name_original
+
+	bpy.ops.object.select_all(action="DESELECT")
+	obj.select_set(state = True)
+
+	bpy.context.view_layer.objects.active = obj
+	obj.hide_viewport = False
+
+	originals.append(bpy.context.object)
+	
+	# Copy
+	copy = None
+
+	if obj.type != 'EMPTY':
+		bpy.ops.object.duplicate()
+		copy = bpy.context.object
+
+		bpy.ops.object.convert(target='MESH')
+
+		for child in children:
+			child.parent = copy
+
+	else:
+		if len(obj.children) == 0:
+			return None
+
+		bpy.ops.object.select_all(action="DESELECT")
+
+		for child in children:
+			bpy.context.view_layer.objects.active = child
+			bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+			child.select_set(state = True)
+			copies.remove(child)
+
+		offset = obj.location
+		if obj.parent is not None:
+			offset = obj.location - obj.parent.location
+
+		bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
+
+		bpy.ops.object.join()
+		copy = bpy.context.object
+		# copy.location += obj.location
+		# copy.rotation_euler.rotate(obj.rotation_euler)
+		# copy.scale *= obj.scale
+		copy.matrix_parent_inverse 
+
+	copy.name = name_original
+	copies.append(copy)
+	copy.location -= pivot
+	return copy
+
+def collect_objects_from_layer_collection(layer_collection):
+	collection = layer_collection.collection
+	for obj in collection.objects:
+		if obj.parent is None:
+			obj.select_set(True)
+
+	for inner_layer_collection in layer_collection.children:
+		if inner_layer_collection.exclude:
+			continue
+		collect_objects_from_layer_collection(inner_layer_collection)
 
 def export(self, target_platform, exportAll):
 
@@ -107,15 +183,9 @@ def export(self, target_platform, exportAll):
 
 	# exporting all objects
 	if exportAll:
-		for obj in bpy.data.objects:
-			obj.select_set(True)
-
-		for collection in bpy.data.collections:
-			if collection.hide_render or collection.hide_select or collection.hide_viewport:
-				continue
-
-			for obj in collection.objects:
-				obj.select_set(True)
+		bpy.ops.object.select_all(action='DESELECT')
+		bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection
+		collect_objects_from_layer_collection(bpy.context.layer_collection)
 
 	if not bpy.context.view_layer.objects.active:
 		bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
@@ -134,38 +204,10 @@ def export(self, target_platform, exportAll):
 		# Detect if animation export...
 		use_animation = objects_organise.get_objects_animation(objects)
 
-
 		copies = []
+		originals = []
 		for obj in objects:
-			name_original = obj.name
-			obj.name = prefix_copy+name_original
-
-			bpy.ops.object.select_all(action="DESELECT")
-			obj.select_set(state = True)
-
-			for child in obj.children:
-				if not child.visible_get():
-					continue
-
-				child.name = prefix_copy + child.name
-				child.select_set(True)
-
-			bpy.context.view_layer.objects.active = obj
-			obj.hide_viewport = False
-			
-			# Copy
-			bpy.ops.object.duplicate()
-			bpy.ops.object.convert(target='MESH')
-			bpy.context.object.name = name_original
-			copies.append(bpy.context.object)
-
-			i = 0
-			for child in bpy.context.object.children:
-				copies.append(child)
-				child.name = obj.children[i].name.replace(prefix_copy,"")
-				i = i + 1
-			
-			bpy.context.object.location-= pivot
+			export_object(obj, prefix_copy, originals, copies, pivot)
 
 		bpy.ops.object.select_all(action="DESELECT")
 		for obj in copies:
@@ -204,10 +246,7 @@ def export(self, target_platform, exportAll):
 		copies.clear()
 		
 		# Restore names
-		for obj in objects:
-			for child in obj.children:
-				child.name = child.name.replace(prefix_copy,"")
-
+		for obj in originals:
 			obj.name = obj.name.replace(prefix_copy,"")
 
 	# Restore previous settings

@@ -37,8 +37,10 @@ class Platform(platform.Platform):
 			global_scale =1.00, 
 			apply_unit_scale=False,
 
-			use_mesh_modifiers=True, 
-			mesh_smooth_type = 'FACE', 
+			use_mesh_modifiers=False, 
+			mesh_smooth_type = 'OFF', 
 			batch_mode='OFF', 
-			use_custom_props=False
+			use_custom_props=False,
+
+			embed_textures=False
 		)

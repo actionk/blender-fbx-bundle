@@ -18,29 +18,14 @@ def is_object_valid(obj):
 	if obj.hide_viewport:
 		return False
 		
-	return obj.type == 'MESH' or obj.type == 'FONT' or obj.type == 'CURVE'
+	return obj.type == 'MESH' or obj.type == 'FONT' or obj.type == 'CURVE' or obj.type == 'EMPTY'
 
 
 def get_objects():
 	objects = []
 
-	if bpy.context.scene.FBXBundleSettings.mode_bundle == 'VIEW_LAYER':
-			# Include all objects of the view layer
-			for obj in bpy.context.layer_collection.collection.objects:
-				if obj not in objects and obj.parent is None:
-					objects.append(obj)
-
-			for layer_collection in bpy.context.layer_collection.children:
-					if layer_collection.exclude:
-						continue
-
-					collection = layer_collection.collection
-					for obj in collection.objects:
-						if obj not in objects and obj.parent is None:
-							objects.append(obj)
-	else:
-		for obj in bpy.context.selected_objects:
-			objects.append(obj)
+	for obj in bpy.context.selected_objects:
+		objects.append(obj)
 
 	# Include all children?
 	if len(objects) > 0 and bpy.context.scene.FBXBundleSettings.include_children:

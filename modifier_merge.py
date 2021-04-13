@@ -81,7 +81,74 @@ class Modifier(modifier.Modifier):
 
 			
 			
+	def merge(self, obj):
+		if obj.name.startswith( 'EXPORT_ORG' ):
+			return None
 
+		bpy.ops.object.select_all(action='DESELECT')
+		bpy.context.view_layer.objects.active = obj
+		for mod in obj.modifiers:
+			name = mod.name
+			bpy.ops.object.modifier_apply(modifier = name)
+
+		for innerObj in obj.children:
+			self.merge(innerObj)
+
+		# merging mesh
+		if len(obj.children) > 0:
+			obj.select_set(True)
+			for innerObj in obj.children:
+				innerObj.select_set(True)
+			
+			origname = obj.name
+			bpy.ops.object.join()
+			bpy.context.object.name = origname
+			bpy.ops.object.convert(target='MESH')
+			
+			# Apply rotation
+			bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+			return bpy.context.object
+		else:
+			return obj
+
+	def merge_collection(self, layer_collection, final_collection, objects):
+		if layer_collection.exclude:
+			return None
+
+		bpy.ops.object.select_all(action='DESELECT')
+		children_collection_objects = []
+		for inner_layer_collection in layer_collection.children:
+			output = self.merge_collection(inner_layer_collection, final_collection, objects)
+			if output is not None:
+				children_collection_objects.append(output)
+
+		children_objects = []
+		collection = layer_collection.collection
+		for obj in collection.objects:
+			if obj not in objects:
+				continue
+
+			output = self.merge(obj)
+			if output is not None:
+				children_objects.append(output)
+
+		if len(children_objects) == 0:
+			return None
+
+		bpy.ops.object.select_all(action='DESELECT')
+		for obj in children_objects:
+			obj.select_set(True)
+
+		bpy.ops.object.join()
+		bpy.context.object.name = layer_collection.name
+		bpy.ops.object.convert(target='MESH')
+
+		# for child_collection_object in children_collection_objects:
+		# 	child_collection_object.parent = bpy.context.object
+
+		final_collection.append(bpy.context.object)
+
+		return bpy.context.object
 
 	def process_objects(self, name, objects):
 
@@ -92,48 +159,11 @@ class Modifier(modifier.Modifier):
 				final_collection = []
 
 				for layer_collection in bpy.context.layer_collection.children:
-					if layer_collection.exclude:
-						continue
-
-					collection = layer_collection.collection
-					bpy.ops.object.select_all(action='DESELECT')
-					if len(collection.all_objects) > 0:
-						for obj in collection.all_objects:
-							if not obj.name.startswith( 'EXPORT_ORG' ):
-								bpy.context.view_layer.objects.active = obj
-								for mod in obj.modifiers:
-									name = mod.name
-									bpy.ops.object.modifier_apply(modifier = name)
-
-						for obj in collection.all_objects:
-							if not obj.name.startswith( 'EXPORT_ORG' ):
-								obj.select_set(True)
-								bpy.context.view_layer.objects.active = obj
-						
-						selected_objects_amount = len(bpy.context.selected_objects)
-						if selected_objects_amount > 1:
-							bpy.ops.object.join()
-							bpy.context.object.name = collection.name #assign bundle name
-							#bpy.context.scene.cursor.location = Vector((0,0,0)) 
-							#bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-
-							# Convert to mesh
-							bpy.ops.object.convert(target='MESH')
-
-							# Apply rotation
-							bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-
-						final_collection.append(bpy.context.selected_objects[0])
-
-				for obj in bpy.context.layer_collection.collection.objects:
-					if not obj.name.startswith( 'EXPORT_ORG' ):
-						final_collection.append(obj)
+					self.merge_collection(bpy.context.layer_collection, final_collection, objects)
 
 				objects = final_collection
 				for obj in final_collection:
 					obj.select_set(True)
-
-				# ggg
 
 			else:
 				bpy.ops.object.join()
